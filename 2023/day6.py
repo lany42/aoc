@@ -1,5 +1,4 @@
 #!/usr/bin/env python3.12
-import re
 
 
 def get_wins(time, dist):

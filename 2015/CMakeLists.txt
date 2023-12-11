@@ -30,5 +30,3 @@ target_compile_options(
 
 find_package(OpenSSL REQUIRED)
 target_link_libraries(2015 PRIVATE OpenSSL::SSL)
-
-file(COPY ../inputs DESTINATION ${CMAKE_BINARY_DIR}/2015)
