@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.12
+#!/usr/bin/env python
 
 RED_LIMIT = 12
 GREEN_LIMIT = 13

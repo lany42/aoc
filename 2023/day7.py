@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.12
+#!/usr/bin/env python
 from enum import Enum, IntEnum, auto
 
 card_map = {
