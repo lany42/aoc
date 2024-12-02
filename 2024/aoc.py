@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class Day1:
-    def __init__(self, fd):
+    def __init__(self, fd) -> None:
         self.list_1 = []
         self.list_2 = []
 
@@ -37,8 +37,54 @@ class Day1:
         return self
 
 
+class Day2:
+    def __init__(self, fd) -> None:
+        self.reports = [
+            list(map(int, report.split()))
+            for report in Path(fd).read_text().strip().split("\n")
+        ]
+
+        self._part_1_safe = 0
+        self._part_1_failed_reports = []
+
+    def part_1(self):
+        for report in self.reports:
+            diffs = [report[i] - b for i, b in enumerate(report[1:])]
+            diff_check = all([abs(d) <= 3 for d in diffs])
+            rate_check = all([i < 0 for i in diffs]) or all([i > 0 for i in diffs])
+
+            if diff_check and rate_check:
+                self._part_1_safe += 1
+
+            else:
+                self._part_1_failed_reports.append(report)
+
+        print(f"Day 02 Part 1: {self._part_1_safe}")
+        return self
+
+    # Dirty brute force
+    def part_2(self):
+        n_safe = 0
+        for bad_report in self._part_1_failed_reports:
+            for i in range(len(bad_report)):
+                to_try = bad_report[:]
+                to_try.pop(i)
+
+                diffs = [to_try[i] - b for i, b in enumerate(to_try[1:])]
+                diff_check = all([abs(d) <= 3 for d in diffs])
+                rate_check = all([i < 0 for i in diffs]) or all([i > 0 for i in diffs])
+
+                if diff_check and rate_check:
+                    n_safe += 1
+                    break
+
+        print(f"Day 02 Part 2: {self._part_1_safe + n_safe}")
+        return self
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
+    Day2("inputs/day2.txt").part_1().part_2()
 
 
 if __name__ == "__main__":
