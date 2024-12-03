@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 from pathlib import Path
 
 
@@ -82,9 +83,43 @@ class Day2:
         return self
 
 
+class Day3:
+    def __init__(self, fd) -> None:
+        self._prog = Path(fd).read_text().strip()
+
+    def part_1(self):
+        r = re.compile(r"mul\(([0-9]+),([0-9]+)\)")
+
+        total = 0
+        for match in r.finditer(self._prog):
+            total += int(match.group(1)) * int(match.group(2))
+
+        print(f"Day 03 Part 1: {total}")
+        return self
+
+    def part_2(self):
+        r = re.compile(r"mul\(([0-9]+),([0-9]+)\)")
+        total = 0
+
+        split_donts = self._prog.split("don't()")
+        do_lines = [split_donts[0]]
+
+        # Gather all 'do' strs from the split don'ts
+        for d in split_donts[1:]:
+            do_lines.extend(d.split("do()")[1:])
+
+        # Run the same regex on the new string
+        for match in r.finditer("".join(do_lines)):
+            total += int(match.group(1)) * int(match.group(2))
+
+        print(f"Day 03 Part 2: {total}")
+        return self
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
     Day2("inputs/day2.txt").part_1().part_2()
+    Day3("inputs/day3.txt").part_1().part_2()
 
 
 if __name__ == "__main__":
