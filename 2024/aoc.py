@@ -219,11 +219,119 @@ class Day4:
         print(f"Day 04 Part 2: {total_x_mas}\n")
 
 
+class Day5:
+    def __init__(self, fd) -> None:
+        text = Path(fd).read_text().strip().split("\n")
+        self.before_rules = {}
+        self.after_rules = {}
+        self.updates = []
+
+        for line in text:
+            if "|" in line:
+                before, after = tuple(map(int, line.split("|")))
+                if before not in self.before_rules:
+                    self.before_rules[before] = set()
+
+                if after not in self.after_rules:
+                    self.after_rules[after] = set()
+
+                self.before_rules[before].add(after)
+                self.after_rules[after].add(before)
+
+            elif "," in line:
+                self.updates.append(list(map(int, line.split(","))))
+
+    # Swap a and b within list update
+    def _swap(self, a, b, update):
+        ia = update.index(a)
+        ib = update.index(b)
+        update[ia] = b
+        update[ib] = a
+
+        return update
+
+    def _checker(self, value, slice, ruleset):
+        if value not in ruleset:
+            return True, 0
+
+        # All pages in the slice must be in the ruleset for this value
+        for v in slice:
+            if v not in ruleset[value]:
+                return False, v
+
+        return True, 0
+
+    def _check_before(self, value, right):
+        return self._checker(value, right, self.before_rules)
+
+    def _check_after(self, value, left):
+        return self._checker(value, left, self.after_rules)
+
+    # For part 1, we can validate each page number against the ruleset
+    # Any failed checks invalidate the entire update
+    def _check_update(self, update):
+        for i, value in enumerate(update):
+            left = update[:i]
+            right = update[i + 1 :]
+
+            rc, _ = self._check_before(value, right)
+            if not rc:
+                return False
+
+            rc, _ = self._check_after(value, left)
+            if not rc:
+                return False
+
+        return True
+
+    # Part 2, order the failed update based on the ruleset
+    # Check for failed before and after checks, then simply swap those
+    # two values and restart the checks (aka bubble-sort)
+    def _check_and_swap(self, update):
+        for i, value in enumerate(update):
+            left = update[:i]
+            right = update[i + 1 :]
+
+            rc, v = self._check_before(value, right)
+            if not rc:
+                return False, self._swap(value, v, update)
+
+            rc, v = self._check_after(value, left)
+            if not rc:
+                return False, self._swap(value, v, update)
+
+        return True, update
+
+    def _order_update(self, update):
+        to_order = update[:]
+        while True:
+            rc, to_order = self._check_and_swap(to_order)
+            if rc:
+                break
+
+        return to_order
+
+    def soln(self):
+        part_1 = 0
+        part_2 = 0
+        for update in self.updates:
+            if self._check_update(update):
+                part_1 += update[len(update) // 2]
+
+            else:
+                ordered = self._order_update(update)
+                part_2 += ordered[len(ordered) // 2]
+
+        print(f"Day 05 Part 1: {part_1}")
+        print(f"Day 05 Part 2: {part_2}\n")
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
     Day2("inputs/day2.txt").part_1().part_2()
     Day3("inputs/day3.txt").part_1().part_2()
     Day4("inputs/day4.txt").soln()
+    Day5("inputs/day5.txt").soln()
 
 
 if __name__ == "__main__":
