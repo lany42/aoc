@@ -303,13 +303,12 @@ class Day5:
         return True, update
 
     def _order_update(self, update):
-        to_order = update[:]
         while True:
-            rc, to_order = self._check_and_swap(to_order)
+            rc, update = self._check_and_swap(update)
             if rc:
                 break
 
-        return to_order
+        return update
 
     def soln(self):
         part_1 = 0
