@@ -415,7 +415,45 @@ class Day6:
             ):
                 ret.add((h, j))
 
-        return ret
+        return list(ret)
+
+    # Part 2, since we know all visited spots and the guard's state in that spot,
+    # we can brute force this by placing an obstacle in front of the guard in every
+    # possible position and check if this creates a loop.
+    def _part_2_func(self, oxoy):
+        x, y, state = self.start
+        obstacles = self.obstacles | {oxoy}
+        visted = {(x, y): 1}
+
+        # print(f"D: Checking {oxoy}")
+        while True:
+            x, y, state = self.walk(x, y, state, obstacles=obstacles)
+            if 0 <= x < self.ncols and 0 <= y < self.nrows:
+                if (x, y) in visted:
+                    visted[(x, y)] += 1
+
+                else:
+                    visted[(x, y)] = 1
+
+            else:
+                break
+
+            if visted[(x, y)] > 100:
+                return 1
+
+        return 0
+
+    def _part_2_serial(self):
+        return sum([self._part_2_func(oxoy) for oxoy in self._calc_obs_locations()])
+
+    def _part_2_parallel(self):
+        with mp.Pool(processes=16) as pool:
+            result = pool.map(
+                func=self._part_2_func,
+                iterable=self._calc_obs_locations(),
+            )
+
+        return sum(result)
 
     def soln(self):
         part_1 = 0
@@ -432,39 +470,8 @@ class Day6:
                 break
 
         part_1 = len({(x, y) for x, y, _ in self.visited})
-
-        # Part 2, since we know all visited spots and the guard's state in that spot,
-        # we can brute force this by placing an obstacle in front of the guard in every
-        # possible position and check if this creates a loop.
-        new_obstacle_locations = self._calc_obs_locations()
-        nnew = len(new_obstacle_locations)
-        sx, sy, _ = self.start
-        n = 1
-        for ox, oy in new_obstacle_locations:
-            print(
-                f"DEBUG: Day5 part2 checking obs ({ox}, {oy}), found {part_2}, checking {n}/{nnew}"
-            )
-            x, y, state = self.start
-            obstacles = self.obstacles | {(ox, oy)}
-            visted = {(x, y): 1}
-            while True:
-                x, y, state = self.walk(x, y, state, obstacles=obstacles)
-                if 0 <= x < self.ncols and 0 <= y < self.nrows:
-                    if (x, y) in visted:
-                        visted[(x, y)] += 1
-
-                    else:
-                        visted[(x, y)] = 1
-
-                else:
-                    break
-
-                # NOTE: Probably a loop
-                if visted[(x, y)] > 100:
-                    part_2 += 1
-                    break
-
-            n += 1
+        # part_2 = self._part_2_serial()
+        part_2 = self._part_2_parallel()
 
         print(f"Day 06 Part 1: {part_1}")
         print(f"Day 06 Part 2: {part_2}\n")
