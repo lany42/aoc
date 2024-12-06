@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import multiprocessing as mp
 import re
 from pathlib import Path
 
@@ -325,12 +326,157 @@ class Day5:
         print(f"Day 05 Part 2: {part_2}\n")
 
 
+class Day6:
+    def __init__(self, fd) -> None:
+        lines = Path(fd).read_text().strip().split("\n")
+
+        self.nrows = len(lines)
+        self.ncols = len(lines[0])
+
+        self.obstacles = {
+            (x, y)
+            for y in range(self.nrows)
+            for x in range(self.ncols)
+            if lines[y][x] in "#"
+        }
+
+        self.visited = {
+            (x, y, "^")
+            for y in range(self.nrows)
+            for x in range(self.ncols)
+            if lines[y][x] in "^"
+        }
+        self.start = list(self.visited)[0]
+
+    def walk(self, x, y, state, obstacles):
+        h = x
+        j = y
+
+        match state:
+            case "^":
+                j -= 1
+                ns = ">"
+
+            case ">":
+                h += 1
+                ns = "v"
+
+            case "v":
+                j += 1
+                ns = "<"
+
+            case "<":
+                h -= 1
+                ns = "^"
+
+            case _:
+                raise RuntimeError(f"Invalid state: {state}")
+
+        # Can't move, change direction only
+        if (h, j) in obstacles:
+            return x, y, ns
+
+        # Move in current direction by one
+        else:
+            return h, j, state
+
+    # Calculate the locations of all possible new obstacles by selecting a
+    # a spot directly in front of where the guard would be
+    def _calc_obs_locations(self):
+        ret = set()
+        sx, sy, _ = self.start
+        for x, y, state in self.visited:
+            match state:
+                case "^":
+                    h = x
+                    j = y - 1
+
+                case ">":
+                    h = x + 1
+                    j = y
+
+                case "v":
+                    h = x
+                    j = y + 1
+
+                case "<":
+                    h = x - 1
+                    j = y
+
+                case _:
+                    raise RuntimeError(f"Invalid state: {state}")
+
+            # NOTE: Always skip the starting position, positions off the map, and existing obstacles
+            if (
+                0 <= h < self.ncols
+                and 0 <= j < self.nrows
+                and (h, j) != (sx, sy)
+                and (h, j) not in self.obstacles
+            ):
+                ret.add((h, j))
+
+        return ret
+
+    def soln(self):
+        part_1 = 0
+        part_2 = 0
+
+        # Part 1, execute walk program and record set of visited positions
+        x, y, state = self.start
+        while True:
+            x, y, state = self.walk(x, y, state, obstacles=self.obstacles)
+            if 0 <= x < self.ncols and 0 <= y < self.nrows:
+                self.visited.add((x, y, state))
+
+            else:
+                break
+
+        part_1 = len({(x, y) for x, y, _ in self.visited})
+
+        # Part 2, since we know all visited spots and the guard's state in that spot,
+        # we can brute force this by placing an obstacle in front of the guard in every
+        # possible position and check if this creates a loop.
+        new_obstacle_locations = self._calc_obs_locations()
+        nnew = len(new_obstacle_locations)
+        sx, sy, _ = self.start
+        n = 1
+        for ox, oy in new_obstacle_locations:
+            print(
+                f"DEBUG: Day5 part2 checking obs ({ox}, {oy}), found {part_2}, checking {n}/{nnew}"
+            )
+            x, y, state = self.start
+            obstacles = self.obstacles | {(ox, oy)}
+            visted = {(x, y): 1}
+            while True:
+                x, y, state = self.walk(x, y, state, obstacles=obstacles)
+                if 0 <= x < self.ncols and 0 <= y < self.nrows:
+                    if (x, y) in visted:
+                        visted[(x, y)] += 1
+
+                    else:
+                        visted[(x, y)] = 1
+
+                else:
+                    break
+
+                # NOTE: Probably a loop
+                if visted[(x, y)] > 100:
+                    part_2 += 1
+                    break
+
+            n += 1
+
+        print(f"Day 06 Part 1: {part_1}")
+        print(f"Day 06 Part 2: {part_2}\n")
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
     Day2("inputs/day2.txt").part_1().part_2()
     Day3("inputs/day3.txt").part_1().part_2()
     Day4("inputs/day4.txt").soln()
     Day5("inputs/day5.txt").soln()
+    Day6("inputs/day6.txt").soln()
 
 
 if __name__ == "__main__":
