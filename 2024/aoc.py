@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import multiprocessing as mp
 import re
+from multiprocessing import Pool
 from pathlib import Path
 
 
@@ -447,7 +447,7 @@ class Day6:
         return sum([self._part_2_func(oxoy) for oxoy in self._calc_obs_locations()])
 
     def _part_2_parallel(self):
-        with mp.Pool(processes=16) as pool:
+        with Pool(processes=16) as pool:
             result = pool.map(
                 func=self._part_2_func,
                 iterable=self._calc_obs_locations(),
@@ -477,6 +477,131 @@ class Day6:
         print(f"Day 06 Part 2: {part_2}\n")
 
 
+class Day7:
+    def __init__(self, fd) -> None:
+        self.calibrations = {}
+        for line in Path(fd).read_text().strip().split("\n"):
+            test, expr = line.split(":")
+            self.calibrations[int(test)] = list(map(int, expr.strip().split()))
+
+    def _masks_iter(self, n):
+        fmt = f"0{n}b"
+        for i in range(2**n):
+            yield format(i, fmt)
+
+    def gather_ops(self, n_operands):
+        n = n_operands - 1
+        return [
+            mask.replace("0", "+").replace("1", "*") for mask in self._masks_iter(n)
+        ]
+
+    def _concat_masks_iter(self, n):
+        for mask in self._masks_iter(n):
+            yield mask.replace("1", "|")
+
+    # Sprinkling in the new || op is easy, we don't need the original ops since
+    # we only use these for failed tests
+    # NOTE: Use '|' instead of '||'
+    # FIXME: This still results in a few dups
+    def permute_with_concat_op(self, ops_iter):
+        ret = []
+        n = len(ops_iter[0])
+        for ops in ops_iter:
+            for mask in self._concat_masks_iter(n):
+                new = ""
+                for i, c in enumerate(mask):
+                    if c == "|":
+                        new += c
+
+                    else:
+                        new += ops[i]
+
+                ret.append(new)
+
+        return ret
+
+    def check_ops(self, test, expr, ops_iter):
+        for ops in ops_iter:
+            acc = expr[0]
+            for op, opr in zip(ops, expr[1:]):
+                match op:
+                    case "+":
+                        acc += opr
+
+                    case "*":
+                        acc *= opr
+
+                    case "|":
+                        acc = int(f"{acc}{opr}")
+
+                    case _:
+                        raise RuntimeError(f"Invalid op {op}")
+
+                if acc > test:
+                    break
+
+            if test == acc:
+                return True
+
+        return False
+
+    def _run(self, test, expr):
+        part_1 = 0
+        part_2 = 0
+
+        ops = self.gather_ops(len(expr))
+        if self.check_ops(test, expr, ops):
+            part_1 += test
+
+        # Part 2, check only failed tests using the new concat op
+        else:
+            if self.check_ops(test, expr, self.permute_with_concat_op(ops)):
+                part_2 += test
+
+        return part_1, part_1 + part_2
+
+    def _serial(self):
+        results = []
+
+        # Part 1, iterate through all exprs and check all possible combinations of operators
+        n = 1
+        nn = len(self.calibrations)
+        for test, expr in self.calibrations.items():
+            print(f"D: Checking {n}/{nn}")
+            results.append(self._run(test, expr))
+            n += 1
+
+        part_1 = 0
+        part_2 = 0
+        for i, j in results:
+            part_1 += i
+            part_2 += j
+
+        return part_1, part_2
+
+    def _parallel(self):
+        with Pool(processes=16) as pool:
+            results = pool.starmap(
+                func=self._run,
+                iterable=list(self.calibrations.items()),
+            )
+
+        part_1 = 0
+        part_2 = 0
+        for i, j in results:
+            part_1 += i
+            part_2 += j
+
+        return part_1, part_2
+
+    def soln(self):
+        # part_1, part_2 = self._serial()
+        part_1, part_2 = self._parallel()
+
+        print(f"Day 07 Part 1: {part_1}")
+        print(f"Day 07 Part 2: {part_2}\n")
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
     Day2("inputs/day2.txt").part_1().part_2()
@@ -484,6 +609,7 @@ def main():
     Day4("inputs/day4.txt").soln()
     Day5("inputs/day5.txt").soln()
     Day6("inputs/day6.txt").soln()
+    Day7("inputs/day7.txt").soln()
 
 
 if __name__ == "__main__":
