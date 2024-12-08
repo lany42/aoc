@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+from itertools import combinations
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -602,6 +603,84 @@ class Day7:
         print(f"Day 07 Part 2: {part_2}\n")
 
 
+class Day8:
+    def __init__(self, fd):
+        self.lines = Path(fd).read_text().strip().split("\n")
+
+        self.nrows = len(self.lines)
+        self.ncols = len(self.lines[0])
+
+        self.antennas = {}
+        for y in range(self.nrows):
+            for x in range(self.ncols):
+                if (c := self.lines[y][x]) != ".":
+                    if c not in self.antennas:
+                        self.antennas[c] = []
+
+                    self.antennas[c].append((x, y))
+
+    def debug(self, antinodes):
+        for y in range(self.nrows):
+            d = ""
+            for x in range(self.ncols):
+                if (x, y) in antinodes:
+                    d += "#"
+
+                else:
+                    d += self.lines[y][x]
+
+            print(d)
+
+    def soln(self):
+        part_1 = part_2 = 0
+
+        # Part 1, solve by iterating through the combinations of same-freq antennas
+        # Get the dx, dy between pairs and use this to place antinodes
+        p1_antinodes = set()
+        p2_antinodes = set()
+        for antennas in self.antennas.values():
+            for (ax, ay), (bx, by) in combinations(antennas, 2):
+                dx = bx - ax
+                dy = by - ay
+                for cx, cy in [(bx + dx, by + dy), (ax - dx, ay - dy)]:
+                    if 0 <= cx < self.ncols and 0 <= cy < self.nrows:
+                        p1_antinodes.add((cx, cy))
+
+                # Part 2, continuously apply dx, dy in both directions
+                # until outside the map for each antenna in the pair
+                cx, cy = (bx + dx, by + dy)
+                while 0 <= cx < self.ncols and 0 <= cy < self.nrows:
+                    p2_antinodes.add((cx, cy))
+                    cx += dx
+                    cy += dy
+
+                cx, cy = (bx - dx, by - dy)
+                while 0 <= cx < self.ncols and 0 <= cy < self.nrows:
+                    p2_antinodes.add((cx, cy))
+                    cx -= dx
+                    cy -= dy
+
+                cx, cy = (ax + dx, ay + dy)
+                while 0 <= cx < self.ncols and 0 <= cy < self.nrows:
+                    p2_antinodes.add((cx, cy))
+                    cx += dx
+                    cy += dy
+
+                cx, cy = (ax - dx, ay - dy)
+                while 0 <= cx < self.ncols and 0 <= cy < self.nrows:
+                    p2_antinodes.add((cx, cy))
+                    cx -= dx
+                    cy -= dy
+
+        part_1 = len(p1_antinodes)
+        part_2 = len(p2_antinodes)
+
+        # self.debug(p2_antinodes)
+
+        print(f"Day 08 Part 1: {part_1}")
+        print(f"Day 08 Part 2: {part_2}\n")
+
+
 def main():
     Day1("inputs/day1.txt").part_1().part_2()
     Day2("inputs/day2.txt").part_1().part_2()
@@ -610,6 +689,7 @@ def main():
     Day5("inputs/day5.txt").soln()
     Day6("inputs/day6.txt").soln()
     Day7("inputs/day7.txt").soln()
+    Day8("inputs/day8.txt").soln()
 
 
 if __name__ == "__main__":
