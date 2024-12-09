@@ -681,15 +681,116 @@ class Day8:
         print(f"Day 08 Part 2: {part_2}\n")
 
 
+class Day9:
+    class Block:
+        def __init__(self, size=0, start=0, id=-1):
+            self._size = size
+            self._ids = [id for _ in range(size)]
+            self._start = start
+
+        @property
+        def size(self):
+            return self._size
+
+        @size.setter
+        def size(self, n):
+            self._size = n
+
+        @property
+        def ids(self):
+            return self._ids
+
+        @property
+        def start(self):
+            return self._start
+
+        @property
+        def free(self):
+            return self._ids.count(-1)
+
+        def is_empty(self):
+            return self.free == self.size
+
+    def _alternate(self, seq):
+        for a, b in zip(seq[::2], seq[1::2]):
+            yield int(a), int(b)
+
+        if len(seq) & 1 == 1:
+            yield int(seq[-1]), 0
+
+    def __init__(self, fd):
+        self.drive = Path(fd).read_text().strip()
+        self.reset()
+
+    def reset(self):
+        self.blocks = []
+
+        id = 0
+        for file, empty in self._alternate(self.drive):
+            self.blocks.append(self.Block(size=file, id=id, start=id))
+            self.blocks.append(self.Block(size=empty, start=id))
+            id += 1
+
+    def soln(self):
+        part_1 = part_2 = 0
+
+        # Part 1, build up the fragged drive
+        expanded = [i for block in self.blocks for i in block.ids]
+        fwd = 0
+        rev = len(expanded) - 1
+
+        while fwd <= rev:
+            left = expanded[fwd]
+            right = expanded[rev]
+
+            if left > -1:
+                part_1 += fwd * left
+                fwd += 1
+
+            elif right > -1:
+                part_1 += fwd * right
+                fwd += 1
+                rev -= 1
+
+            else:
+                rev -= 1
+
+        p2_expanded = [
+            (block.ids[0], block.size) for block in self.blocks if len(block.ids) > 0
+        ]
+
+        for rev in reversed(range(len(p2_expanded))):
+            for fwd in range(rev):
+                free, free_size = p2_expanded[fwd]
+                file, file_size = p2_expanded[rev]
+
+                if file > -1 and free == -1 and file_size <= free_size:
+                    p2_expanded[rev] = (-1, file_size)
+                    p2_expanded[fwd] = (-1, free_size - file_size)
+                    p2_expanded.insert(fwd, (file, file_size))
+
+        result = []
+        for i, s in p2_expanded:
+            result.extend([i for _ in range(s)])
+
+        for i, c in enumerate(result):
+            if c > -1:
+                part_2 += i * c
+
+        print(f"Day 09 Part 1: {part_1}")
+        print(f"Day 09 Part 2: {part_2}\n")
+
+
 def main():
-    Day1("inputs/day1.txt").part_1().part_2()
-    Day2("inputs/day2.txt").part_1().part_2()
-    Day3("inputs/day3.txt").part_1().part_2()
-    Day4("inputs/day4.txt").soln()
-    Day5("inputs/day5.txt").soln()
-    Day6("inputs/day6.txt").soln()
-    Day7("inputs/day7.txt").soln()
-    Day8("inputs/day8.txt").soln()
+    # Day1("inputs/day1.txt").part_1().part_2()
+    # Day2("inputs/day2.txt").part_1().part_2()
+    # Day3("inputs/day3.txt").part_1().part_2()
+    # Day4("inputs/day4.txt").soln()
+    # Day5("inputs/day5.txt").soln()
+    # Day6("inputs/day6.txt").soln()
+    # Day7("inputs/day7.txt").soln()
+    # Day8("inputs/day8.txt").soln()
+    Day9("inputs/day9.txt").soln()
 
 
 if __name__ == "__main__":
