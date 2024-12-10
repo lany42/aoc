@@ -6,7 +6,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 
-class Day1:
+class Day01:
     def __init__(self, fd) -> None:
         self.list_1 = []
         self.list_2 = []
@@ -40,7 +40,7 @@ class Day1:
         return self
 
 
-class Day2:
+class Day02:
     def __init__(self, fd) -> None:
         self.reports = [
             list(map(int, report.split()))
@@ -85,7 +85,7 @@ class Day2:
         return self
 
 
-class Day3:
+class Day03:
     def __init__(self, fd) -> None:
         self._prog = Path(fd).read_text().strip()
 
@@ -118,7 +118,7 @@ class Day3:
         return self
 
 
-class Day4:
+class Day04:
     def __init__(self, fd) -> None:
         lines = Path(fd).read_text().strip().split("\n")
 
@@ -221,7 +221,7 @@ class Day4:
         print(f"Day 04 Part 2: {total_x_mas}\n")
 
 
-class Day5:
+class Day05:
     def __init__(self, fd) -> None:
         text = Path(fd).read_text().strip().split("\n")
         self.before_rules = {}
@@ -327,7 +327,7 @@ class Day5:
         print(f"Day 05 Part 2: {part_2}\n")
 
 
-class Day6:
+class Day06:
     def __init__(self, fd) -> None:
         lines = Path(fd).read_text().strip().split("\n")
 
@@ -478,7 +478,7 @@ class Day6:
         print(f"Day 06 Part 2: {part_2}\n")
 
 
-class Day7:
+class Day07:
     def __init__(self, fd) -> None:
         self.calibrations = {}
         for line in Path(fd).read_text().strip().split("\n"):
@@ -603,7 +603,7 @@ class Day7:
         print(f"Day 07 Part 2: {part_2}\n")
 
 
-class Day8:
+class Day08:
     def __init__(self, fd):
         self.lines = Path(fd).read_text().strip().split("\n")
 
@@ -681,61 +681,25 @@ class Day8:
         print(f"Day 08 Part 2: {part_2}\n")
 
 
-class Day9:
-    class Block:
-        def __init__(self, size=0, start=0, id=-1):
-            self._size = size
-            self._ids = [id for _ in range(size)]
-            self._start = start
-
-        @property
-        def size(self):
-            return self._size
-
-        @size.setter
-        def size(self, n):
-            self._size = n
-
-        @property
-        def ids(self):
-            return self._ids
-
-        @property
-        def start(self):
-            return self._start
-
-        @property
-        def free(self):
-            return self._ids.count(-1)
-
-        def is_empty(self):
-            return self.free == self.size
-
-    def _alternate(self, seq):
-        for a, b in zip(seq[::2], seq[1::2]):
-            yield int(a), int(b)
-
-        if len(seq) & 1 == 1:
-            yield int(seq[-1]), 0
-
+class Day09:
     def __init__(self, fd):
-        self.drive = Path(fd).read_text().strip()
-        self.reset()
-
-    def reset(self):
-        self.blocks = []
+        drive = Path(fd).read_text().strip()
 
         id = 0
-        for file, empty in self._alternate(self.drive):
-            self.blocks.append(self.Block(size=file, id=id, start=id))
-            self.blocks.append(self.Block(size=empty, start=id))
-            id += 1
+        self.blocks = []
+        for idx, c in enumerate(drive):
+            if (idx & 1) == 0:
+                self.blocks.append((id, int(c)))
+                id += 1
 
-    def soln(self):
-        part_1 = part_2 = 0
+            else:
+                self.blocks.append((-1, int(c)))
 
-        # Part 1, build up the fragged drive
-        expanded = [i for block in self.blocks for i in block.ids]
+    # Solve part 1 with two pointers on an expanded list
+    # Does not work with part 2
+    def part_1_1(self):
+        part_1 = 0
+        expanded = [c for (id, n) in self.blocks for c in [id] * n]
         fwd = 0
         rev = len(expanded) - 1
 
@@ -755,42 +719,71 @@ class Day9:
             else:
                 rev -= 1
 
-        p2_expanded = [
-            (block.ids[0], block.size) for block in self.blocks if len(block.ids) > 0
-        ]
+        return part_1
 
-        for rev in reversed(range(len(p2_expanded))):
-            for fwd in range(rev):
-                free, free_size = p2_expanded[fwd]
-                file, file_size = p2_expanded[rev]
+    # Part 1 and part 2 general solution by rev/fwd block ptrs
+    def general_soln(self, drive):
+        for r in reversed(range(len(drive))):
+            for f in range(r):
+                free, free_size = drive[f]
+                file, file_size = drive[r]
 
                 if file > -1 and free == -1 and file_size <= free_size:
-                    p2_expanded[rev] = (-1, file_size)
-                    p2_expanded[fwd] = (-1, free_size - file_size)
-                    p2_expanded.insert(fwd, (file, file_size))
+                    drive[r] = (-1, file_size)
+                    drive[f] = (-1, free_size - file_size)
+                    drive.insert(f, (file, file_size))
 
-        result = []
-        for i, s in p2_expanded:
-            result.extend([i for _ in range(s)])
+        return sum(
+            [
+                i * c
+                for (i, c) in enumerate([d for (id, n) in drive for d in [id] * n])
+                if c > -1
+            ]
+        )
 
-        for i, c in enumerate(result):
-            if c > -1:
-                part_2 += i * c
+    # Solve part 1 using block sizes of 1
+    # Essentially identical to part_1_1 solution (but drastically slower)
+    def part_1_2(self):
+        drive = [(c, 1) for (id, n) in self.blocks for c in [id] * n]
+        return self.general_soln(drive)
 
-        print(f"Day 09 Part 1: {part_1}")
+    # Solve part 2 using the blocks from the drive map
+    def part_2(self):
+        return self.general_soln(self.blocks)
+
+    def soln(self):
+        part_1_1 = self.part_1_1()
+        part_1_2 = self.part_1_2()
+        assert part_1_1 == part_1_2
+
+        part_2 = self.part_2()
+
+        print(f"Day 09 Part 1: {part_1_2}")
         print(f"Day 09 Part 2: {part_2}\n")
 
 
+class Day10:
+    def __init__(self, fd):
+        pass
+
+    def soln(self):
+        part_1 = part_2 = 0
+
+        print(f"Day 10 Part 1: {part_1}")
+        print(f"Day 10 Part 2: {part_2}\n")
+
+
 def main():
-    # Day1("inputs/day1.txt").part_1().part_2()
-    # Day2("inputs/day2.txt").part_1().part_2()
-    # Day3("inputs/day3.txt").part_1().part_2()
-    # Day4("inputs/day4.txt").soln()
-    # Day5("inputs/day5.txt").soln()
-    # Day6("inputs/day6.txt").soln()
-    # Day7("inputs/day7.txt").soln()
-    # Day8("inputs/day8.txt").soln()
-    Day9("inputs/day9.txt").soln()
+    # Day01("inputs/day1.txt").part_1().part_2()
+    # Day02("inputs/day2.txt").part_1().part_2()
+    # Day03("inputs/day3.txt").part_1().part_2()
+    # Day04("inputs/day4.txt").soln()
+    # Day05("inputs/day5.txt").soln()
+    # Day06("inputs/day6.txt").soln()
+    # Day07("inputs/day7.txt").soln()
+    # Day08("inputs/day8.txt").soln()
+    # Day09("inputs/day9.txt").soln()
+    Day10("inputs/day10.tst").soln()
 
 
 if __name__ == "__main__":
