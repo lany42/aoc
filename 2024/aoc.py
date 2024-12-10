@@ -763,27 +763,101 @@ class Day09:
 
 
 class Day10:
+    LT = 1
+    RT = 2
+    UP = 3
+    DN = 4
+
     def __init__(self, fd):
-        pass
+        self.map = Path(fd).read_text().strip().split("\n")
+
+        self.nrows = len(self.map)
+        self.ncols = len(self.map[0])
+
+        self.grid = {
+            (x, y)
+            for y in range(self.nrows)
+            for x in range(self.ncols)
+            if self.map[y][x] != "."
+        }
+        self.starts = {(int(x), int(y)) for x, y in self.grid if self.map[y][x] == "0"}
+
+    def walk(self, prev, x, y, DIR):
+        if (x, y) not in self.grid:
+            return []
+
+        curr = int(self.map[y][x])
+
+        if curr - prev != 1:
+            return []
+
+        if curr == 9:
+            return [(x, y)]
+
+        match DIR:
+            case self.LT:
+                return (
+                    self.walk(curr, x - 1, y, self.LT)
+                    + self.walk(curr, x, y + 1, self.UP)
+                    + self.walk(curr, x, y - 1, self.DN)
+                )
+
+            case self.RT:
+                return (
+                    self.walk(curr, x + 1, y, self.RT)
+                    + self.walk(curr, x, y + 1, self.UP)
+                    + self.walk(curr, x, y - 1, self.DN)
+                )
+
+            case self.UP:
+                return (
+                    self.walk(curr, x + 1, y, self.RT)
+                    + self.walk(curr, x - 1, y, self.LT)
+                    + self.walk(curr, x, y + 1, self.UP)
+                )
+
+            case self.DN:
+                return (
+                    self.walk(curr, x + 1, y, self.RT)
+                    + self.walk(curr, x - 1, y, self.LT)
+                    + self.walk(curr, x, y - 1, self.DN)
+                )
+
+            case _:
+                raise RuntimeError()
 
     def soln(self):
         part_1 = part_2 = 0
+
+        # Walk all possible paths
+        # Part 1, count unique peaks reached
+        # Part 2, count total peaks reached
+        for x, y in self.starts:
+            peaks = (
+                self.walk(0, x + 1, y, self.RT)
+                + self.walk(0, x - 1, y, self.LT)
+                + self.walk(0, x, y + 1, self.UP)
+                + self.walk(0, x, y - 1, self.DN)
+            )
+
+            part_1 += len(set(peaks))
+            part_2 += len(peaks)
 
         print(f"Day 10 Part 1: {part_1}")
         print(f"Day 10 Part 2: {part_2}\n")
 
 
 def main():
-    # Day01("inputs/day1.txt").part_1().part_2()
-    # Day02("inputs/day2.txt").part_1().part_2()
-    # Day03("inputs/day3.txt").part_1().part_2()
-    # Day04("inputs/day4.txt").soln()
-    # Day05("inputs/day5.txt").soln()
-    # Day06("inputs/day6.txt").soln()
-    # Day07("inputs/day7.txt").soln()
-    # Day08("inputs/day8.txt").soln()
-    # Day09("inputs/day9.txt").soln()
-    Day10("inputs/day10.tst").soln()
+    Day01("inputs/day1.txt").part_1().part_2()
+    Day02("inputs/day2.txt").part_1().part_2()
+    Day03("inputs/day3.txt").part_1().part_2()
+    Day04("inputs/day4.txt").soln()
+    Day05("inputs/day5.txt").soln()
+    Day06("inputs/day6.txt").soln()
+    Day07("inputs/day7.txt").soln()
+    Day08("inputs/day8.txt").soln()
+    Day09("inputs/day9.txt").soln()
+    Day10("inputs/day10.txt").soln()
 
 
 if __name__ == "__main__":
