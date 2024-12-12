@@ -2,6 +2,7 @@
 
 import re
 from itertools import combinations
+from math import floor, log10
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -847,6 +848,124 @@ class Day10:
         print(f"Day 10 Part 2: {part_2}\n")
 
 
+class Day11:
+    def __init__(self, fd):
+        self.stones = list(map(int, Path(fd).read_text().strip().split()))
+
+    # Count the number of digits in a positive integer
+    def count_digits(self, num):
+        return floor(log10(num)) + 1
+
+    # Yield the digits from an integer from left to right
+    def yield_digits(self, num):
+        if num >= 10:
+            yield from self.yield_digits(num // 10)
+
+        yield num % 10
+
+    def split_even(self, num, n_digits):
+        left = 0
+        right = 0
+        half = n_digits // 2
+
+        for i, digit in enumerate(self.yield_digits(num)):
+            if i < half:
+                left *= 10
+                left += digit
+
+            else:
+                right *= 10
+                right += digit
+
+        return left, right
+
+    def ncache_run(self, stones, n_max):
+        scache = {}
+        ncache = {s: 1 for s in stones}
+
+        while n_max > 0:
+            counts = {}
+            for stone, num in ncache.items():
+                if num > 0:
+                    if stone in scache:
+                        result = scache[stone]
+
+                    elif stone == 0:
+                        result = [1]
+                        scache[stone] = result
+
+                    elif (n_digits := self.count_digits(stone)) & 1 == 0:
+                        result = list(self.split_even(stone, n_digits))
+                        scache[stone] = result
+
+                    else:
+                        result = [stone * 2024]
+                        scache[stone] = result
+
+                    for new_stone in result:
+                        if new_stone in counts:
+                            counts[new_stone] += num
+
+                        else:
+                            counts[new_stone] = num
+
+            ncache = counts
+            n_max -= 1
+
+        return sum(list(ncache.values()))
+
+    def _step(self, stone):
+        if stone == 0:
+            return [1]
+
+        elif (n_digits := self.count_digits(stone)) & 1 == 0:
+            return list(self.split_even(stone, n_digits))
+
+        else:
+            return [stone * 2024]
+
+    def _warmup(self, stones, n):
+        for _ in range(n):
+            stones = [i for s in stones for i in self._step(s)]
+
+        return stones
+
+    def warmup(self, stones):
+        n = 1
+        while True:
+            warmer = self._warmup(stones, n)
+            if len(warmer) > 32:
+                break
+
+            stones = warmer
+            n += 1
+
+        return n, stones
+
+    def parallel_ncache(self, stones: list[int], n_max):
+        args = [([i], n_max) for i in stones]
+        with Pool() as pool:
+            result = pool.starmap(
+                func=self.ncache_run,
+                iterable=args,
+            )
+
+        return sum(result)
+
+    def soln(self):
+        part_1 = self.ncache_run(self.stones, n_max=25)
+        part_2 = self.ncache_run(self.stones, n_max=75)
+
+        n_warm, stones = self.warmup(self.stones)
+        n_digits = self.count_digits(
+            self.parallel_ncache(stones, n_max=10_000 - n_warm)
+        )
+
+        print(f"Day 11 Part 1: {part_1}")
+        print(f"Day 11 Part 2: {part_2}")
+        print(f"Day 11 Extra: {n_digits}\n")
+
+
 def main():
     Day01("inputs/day1.txt").part_1().part_2()
     Day02("inputs/day2.txt").part_1().part_2()
@@ -858,6 +977,7 @@ def main():
     Day08("inputs/day8.txt").soln()
     Day09("inputs/day9.txt").soln()
     Day10("inputs/day10.txt").soln()
+    Day11("inputs/day11.txt").soln()
 
 
 if __name__ == "__main__":
