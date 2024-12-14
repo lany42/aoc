@@ -956,28 +956,103 @@ class Day11:
         part_1 = self.ncache_run(self.stones, n_max=25)
         part_2 = self.ncache_run(self.stones, n_max=75)
 
-        n_warm, stones = self.warmup(self.stones)
-        n_digits = self.count_digits(
-            self.parallel_ncache(stones, n_max=10_000 - n_warm)
-        )
+        # n_warm, stones = self.warmup(self.stones)
+        # n_digits = self.count_digits(
+        #    self.parallel_ncache(stones, n_max=10_000 - n_warm)
+        # )
 
         print(f"Day 11 Part 1: {part_1}")
         print(f"Day 11 Part 2: {part_2}")
-        print(f"Day 11 Extra: {n_digits}\n")
+        # print(f"Day 11 Extra: {n_digits}\n")
+
+
+class Day12:
+    def __init__(self, fd):
+        pass
+
+    def soln(self):
+        part_1 = part_2 = 0
+        print(f"Day 12 Part 1: {part_1}")
+        print(f"Day 12 Part 2: {part_2}\n")
+
+
+class Day13:
+    def _parse(self, string):
+        prefix = string[0]
+        if prefix == "+":
+            return int(string[1:])
+
+        else:
+            return int(string[1:]) * -1
+
+    def __init__(self, fd):
+        self.machines = []
+
+        a_re = re.compile(r"Button A: X([+-][0-9]+), Y([+-][0-9]+)")
+        b_re = re.compile(r"Button B: X([+-][0-9]+), Y([+-][0-9]+)")
+        p_re = re.compile(r"Prize: X=([0-9]+), Y=([0-9]+)")
+        for machine in Path(fd).read_text().strip().split("\n\n"):
+            a = a_re.search(machine)
+            b = b_re.search(machine)
+            p = p_re.search(machine)
+
+            self.machines.append(
+                (
+                    (self._parse(a.group(1)), self._parse(b.group(1))),
+                    (self._parse(a.group(2)), self._parse(b.group(2))),
+                    (int(p.group(1)), int(p.group(2))),
+                )
+            )
+
+    def linalg_solve(self, xpair, ypair, prize):
+        import numpy as np
+
+        X = np.array([xpair, ypair])
+        Y = np.array(prize)
+        Z = np.linalg.solve(X, Y).round()
+
+        if np.all(Y == Z @ X.T):
+            return np.sum(Z * np.array((3, 1)))
+
+        else:
+            return 0
+
+    def part_1(self):
+        total = 0
+        for machine in self.machines:
+            total += self.linalg_solve(*machine)
+
+        return int(total)
+
+    def part_2(self):
+        from operator import add
+
+        total = 0
+        for xpair, ypair, prize in self.machines:
+            prize = tuple(map(add, prize, (10_000_000_000_000,) * 2))
+            total += self.linalg_solve(xpair, ypair, prize)
+
+        return int(total)
+
+    def soln(self):
+        print(f"Day 13 Part 1: {self.part_1()}")
+        print(f"Day 13 Part 2: {self.part_2()}\n")
 
 
 def main():
-    Day01("inputs/day1.txt").part_1().part_2()
-    Day02("inputs/day2.txt").part_1().part_2()
-    Day03("inputs/day3.txt").part_1().part_2()
-    Day04("inputs/day4.txt").soln()
-    Day05("inputs/day5.txt").soln()
-    Day06("inputs/day6.txt").soln()
-    Day07("inputs/day7.txt").soln()
-    Day08("inputs/day8.txt").soln()
-    Day09("inputs/day9.txt").soln()
-    Day10("inputs/day10.txt").soln()
-    Day11("inputs/day11.txt").soln()
+    # Day01("inputs/day1.txt").part_1().part_2()
+    # Day02("inputs/day2.txt").part_1().part_2()
+    # Day03("inputs/day3.txt").part_1().part_2()
+    # Day04("inputs/day4.txt").soln()
+    # Day05("inputs/day5.txt").soln()
+    # Day06("inputs/day6.txt").soln()
+    # Day07("inputs/day7.txt").soln()
+    # Day08("inputs/day8.txt").soln()
+    # Day09("inputs/day9.txt").soln()
+    # Day10("inputs/day10.txt").soln()
+    # Day11("inputs/day11.txt").soln()
+    # Day12("inputs/day12.tst").soln()
+    Day13("inputs/day13.txt").soln()
 
 
 if __name__ == "__main__":
