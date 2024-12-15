@@ -967,11 +967,72 @@ class Day11:
 
 
 class Day12:
+    L = 1
+    R = 2
+    U = 3
+    D = 4
+
     def __init__(self, fd):
-        pass
+        self.map = Path(fd).read_text().strip().split("\n")
+
+        self.nrows = len(self.map)
+        self.ncols = len(self.map[0])
+
+        # Gather locations of X, M, A, and S
+        self.grid = {(x, y) for y in range(self.nrows) for x in range(self.ncols)}
+        self.visited = set()
+
+    def next(self, x, y, plant, edges):
+        return [
+            self.walk(x + 1, y, plant, edges),
+            self.walk(x - 1, y, plant, edges),
+            self.walk(x, y + 1, plant, edges),
+            self.walk(x, y - 1, plant, edges),
+        ]
+
+    def walk(self, x, y, plant, edges):
+        # Off the map, not a valid point
+        if (x, y) not in self.grid:
+            edges.add((x, y))
+            return 0, 1
+
+        # A boundary to the current plot
+        elif self.map[y][x] != plant:
+            edges.add((x, y))
+            return 0, 1
+
+        # Already walked here
+        elif (x, y) in self.visited:
+            return 0, 0, None
+
+        # A valid spot in the current plot
+        else:
+            a = 1
+            p = 0
+            self.visited.add((x, y))
+            for df in self.next(x, y, plant, edges):
+                a += df[0]
+                p += df[1]
+
+            return a, p
+
+    def part_1_and_2(self):
+        part_1 = 0
+        part_2 = 0
+        while self.visited != self.grid:
+            edges = set()
+            x, y = (self.grid - self.visited).pop()
+            a, p = self.walk(x, y, self.map[y][x], edges)
+
+            print(self.map[y][x], sorted(sorted(list(edges)), key=lambda x: x[1]))
+
+            part_1 += a * p
+            part_2 += a * p
+
+        return part_1, part_2
 
     def soln(self):
-        part_1 = part_2 = 0
+        part_1, part_2 = self.part_1_and_2()
         print(f"Day 12 Part 1: {part_1}")
         print(f"Day 12 Part 2: {part_2}\n")
 
@@ -1051,8 +1112,8 @@ def main():
     # Day09("inputs/day9.txt").soln()
     # Day10("inputs/day10.txt").soln()
     # Day11("inputs/day11.txt").soln()
-    # Day12("inputs/day12.tst").soln()
-    Day13("inputs/day13.txt").soln()
+    Day12("inputs/day12.tst").soln()
+    # Day13("inputs/day13.txt").soln()
 
 
 if __name__ == "__main__":
