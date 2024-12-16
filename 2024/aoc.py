@@ -971,6 +971,10 @@ class Day12:
     R = 2
     U = 3
     D = 4
+    UR = 5
+    LR = 6
+    LL = 7
+    UL = 8
 
     def __init__(self, fd):
         self.map = Path(fd).read_text().strip().split("\n")
@@ -988,6 +992,18 @@ class Day12:
             self.walk(x - 1, y, plant, edges),
             self.walk(x, y + 1, plant, edges),
             self.walk(x, y - 1, plant, edges),
+        ]
+
+    def radial_scan(self, x, y):
+        return [
+            (x, y - 1, self.U),
+            (x + 1, y - 1, self.UR),
+            (x + 1, y, self.R),
+            (x + 1, y + 1, self.LR),
+            (x, y + 1, self.D),
+            (x - 1, y + 1, self.LL),
+            (x - 1, y, self.L),
+            (x - 1, y - 1, self.UL),
         ]
 
     def walk(self, x, y, plant, edges):
@@ -1016,6 +1032,22 @@ class Day12:
 
             return a, p
 
+    def walk_edges(self, edges):
+        corners = 0
+        visited = set()
+        current = self.D
+        for x, y in edges:
+            for nx, ny, dir in self.radial_scan(x, y):
+                if (nx, ny) in edges and (nx, ny) not in visited:
+                    break
+
+            if dir != current:
+                visited.add((nx, ny))
+                current = dir
+                corners += 1
+
+        return corners
+
     def part_1_and_2(self):
         part_1 = 0
         part_2 = 0
@@ -1023,11 +1055,11 @@ class Day12:
             edges = set()
             x, y = (self.grid - self.visited).pop()
             a, p = self.walk(x, y, self.map[y][x], edges)
-
-            print(self.map[y][x], sorted(sorted(list(edges)), key=lambda x: x[1]))
+            s = self.walk_edges(edges)
+            print(self.map[y][x], s)
 
             part_1 += a * p
-            part_2 += a * p
+            part_2 += a * s
 
         return part_1, part_2
 
@@ -1100,6 +1132,114 @@ class Day13:
         print(f"Day 13 Part 2: {self.part_2()}\n")
 
 
+class Day15:
+    def __init__(self, fd):
+        grid, cmds = Path(fd).read_text().strip().split("\n\n")
+        self.grid = grid.strip().split("\n")
+        self.cmds = "".join(cmds.strip().split("\n"))
+
+        self.nrows = len(self.grid)
+        self.ncols = len(self.grid)
+
+        self.robot = None
+        self.walls = set()
+        self.boxes = set()
+
+        for y in range(self.nrows):
+            for x in range(self.ncols):
+                c = self.grid[y][x]
+                if c == "#":
+                    self.walls.add((x, y))
+
+                elif c == "O":
+                    self.boxes.add((x, y))
+
+                elif c == "@":
+                    self.robot = (x, y)
+
+        self.print_grid()
+
+    def print_grid(self):
+        for y in range(self.nrows):
+            line = ""
+            for x in range(self.ncols):
+                if (x, y) in self.walls:
+                    line += "#"
+
+                elif (x, y) in self.boxes:
+                    line += "O"
+
+                elif (x, y) == self.robot:
+                    line += "@"
+
+                else:
+                    line += "."
+
+            print(line)
+
+    def walk(self, cmd):
+        x, y = self.robot
+        line = None
+        match cmd:
+            case "^":
+                line = [(x, b) for b in reversed(range(0, y))]
+
+            case ">":
+                line = [(b, y) for b in range(x + 1, self.ncols)]
+
+            case "v":
+                line = [(x, b) for b in range(y + 1, self.nrows)]
+
+            case "<":
+                line = [(b, y) for b in reversed(range(0, x))]
+
+            case _:
+                return
+
+        # Quick return, a wall
+        if line[0] in self.walls:
+            return
+
+        # Quick return, an empty space
+        if line[0] not in self.boxes:
+            self.robot = line[0]
+            return
+
+        # Get the line of boxes
+        boxes = []
+        for next in line:
+            if next in self.boxes:
+                boxes.append(next)
+
+            # Can't possibly move
+            elif next in self.walls:
+                return
+
+            # Must be an empty space, we can move
+            else:
+                last = next
+                break
+
+        # We can move, shift all boxes
+        self.boxes.remove(boxes[0])
+        self.boxes.add(last)
+
+        # Move the robot
+        self.robot = line[0]
+
+    def part_1(self):
+        for c in self.cmds:
+            self.walk(c)
+
+        self.print_grid()
+        return sum(x + (100 * y) for x, y in self.boxes)
+
+    def soln(self):
+        part_2 = 0
+        print(f"Day 15 Part 1: {self.part_1()}")
+        print(f"Day 15 Part 2: {part_2}\n")
+
+
 def main():
     # Day01("inputs/day1.txt").part_1().part_2()
     # Day02("inputs/day2.txt").part_1().part_2()
@@ -1112,8 +1252,9 @@ def main():
     # Day09("inputs/day9.txt").soln()
     # Day10("inputs/day10.txt").soln()
     # Day11("inputs/day11.txt").soln()
-    Day12("inputs/day12.tst").soln()
+    # Day12("inputs/day12.tst").soln()
     # Day13("inputs/day13.txt").soln()
+    Day15("inputs/day15.txt").soln()
 
 
 if __name__ == "__main__":
